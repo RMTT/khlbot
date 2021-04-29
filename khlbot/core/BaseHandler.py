@@ -1,7 +1,5 @@
 import asyncio
-import functools
-
-from khlbot import *
+from khlbot.config import *
 from khlbot.core.Handler import Handler
 from khlbot.core.Commander import Commander
 
