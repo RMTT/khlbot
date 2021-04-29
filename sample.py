@@ -6,7 +6,7 @@ commander = Commander(prefix="-")
 
 
 @commander.command("hello")
-def hello():
+async def hello():
     create_msg_to_channel("Hello", channel_id=12345, _type=0, token="")
 
 

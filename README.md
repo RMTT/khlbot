@@ -11,7 +11,7 @@ commander = Commander(prefix="-")
 
 
 @commander.command("hello")
-def hello():
+async def hello():
     # 收到包含"-hello"的信息时，发送消息到指定频道
     create_msg_to_channel("Hello", channel_id=12345, _type=0, token="")
 
