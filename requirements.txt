@@ -1,0 +1,11 @@
+async-timeout
+attrs
+certifi
+chardet
+idna
+multidict
+requests
+typing-extensions
+urllib3
+websockets
+yarl
