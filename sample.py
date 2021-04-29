@@ -2,7 +2,7 @@ from khlbot.core.Bot import Bot
 from khlbot.core.Commander import Commander
 from khlbot.common import create_msg_to_channel
 
-commander = Commander("-")
+commander = Commander(prefix="-")
 
 
 @commander.command("hello")
