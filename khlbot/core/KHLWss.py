@@ -1,6 +1,6 @@
 import asyncio
 import multiprocessing
-
+import khlbot.config as CONFIG
 import requests
 import json
 from khlbot.core.Logger import Logger
@@ -104,7 +104,10 @@ class KHLWss:
                         self.latest_sn = json_rep["sn"]
 
                         if self.__event_queue is not None:
-                            self.event_queue.put(json_rep['d'])
+                            self.__event_queue.put({
+                                CONFIG.BOT_KEY_MESSAGE_TYPE: CONFIG.BOT_MESSAGE_TYPE_COMMAND,
+                                CONFIG.BOT_KEY_MESSAGE_DATA: json_rep['d']
+                            })
                 except (websockets.ConnectionClosedError, websockets.ConnectionClosed) as e:
                     Logger.warning("The websockets have closed unexpectedly")
                     ws_connection = None

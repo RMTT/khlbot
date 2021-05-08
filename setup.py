@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="khlbot",
-    version="0.1",
+    version="0.2",
     author="RMT",
     author_email="d.rong@outlook.com",
     description="Robot framework for KaiHeiLa",

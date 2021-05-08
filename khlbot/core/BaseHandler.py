@@ -1,9 +1,8 @@
 import multiprocessing
-import os
+import khlbot.config as CONFIG
 
 from khlbot.config import *
 from khlbot.core.Handler import Handler
-from khlbot.core.Commander import Commander
 
 
 class BaseHandler(Handler):
@@ -34,7 +33,7 @@ class BaseHandler(Handler):
 
                 if pos != -1:
                     params = []
-                    for _ in range(commands[command][Commander.KEY_PARAM_NUMBER]):
+                    for _ in range(commands[command][CONFIG.COMMANDER_KEY_PARAM_NUMBER]):
                         next_space = text.find(' ', pos + len(command) + 1)
                         if next_space != -1:
                             params.append(text[pos + len(command) + 1:next_space])
@@ -47,8 +46,8 @@ class BaseHandler(Handler):
 
                         pos = next_space + 1
 
-                    if len(params) == commands[command][Commander.KEY_PARAM_NUMBER]:
-                        func = commands[command][Commander.KEY_HANDLE]
+                    if len(params) == commands[command][CONFIG.COMMANDER_KEY_PARAM_NUMBER]:
+                        func = commands[command][CONFIG.COMMANDER_KEY_HANDLE]
 
                         await func(*params, **kwargs)
                         break
@@ -57,6 +56,8 @@ class BaseHandler(Handler):
         """
         Same as Handler.handle
         """
-        print("I'm handled on process: " + str(os.getpid()))
-        if item["type"] == KHL_MSG_TEXT and item["channel_type"] == "GROUP":
+        if item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_COMMAND:
+            item = item[CONFIG.BOT_KEY_MESSAGE_DATA]
             await self.handle_command(item["content"], target_id=item["target_id"], extra=item["extra"])
+        elif item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_INTERVAL:
+            await item[CONFIG.COMMANDER_KEY_HANDLE]()

@@ -29,6 +29,7 @@ class Bot:
         self.__commanders = []
         self.__process_manager = multiprocessing.Manager()
         self.__config = _config
+        self.__loop = None
 
         max_queue_size = 10000  # default queue size
         if CONFIG.MAX_EVENT_QUEUE_SIZE in self.__config:
@@ -38,7 +39,7 @@ class Bot:
         else:
             self.__queue = queue
 
-        process_idle_timeout = 60
+        process_idle_timeout = 60  # default timeout
         if CONFIG.PROCESSING_IDLE_TIMEOUT in self.__config:
             process_idle_timeout = self.__config[CONFIG.PROCESSING_IDLE_TIMEOUT]
         if handler is None:
@@ -50,7 +51,7 @@ class Bot:
             self.__config[CONFIG.MAX_PROCESSING_NUMBER] = os.cpu_count()
 
         if CONFIG.MAX_CONSUMER_NUMBER not in self.__config:
-            self.__config[CONFIG.MAX_CONSUMER_NUMBER] = 3
+            self.__config[CONFIG.MAX_CONSUMER_NUMBER] = 4  # default consumers per process
 
         self.__pool = multiprocessing.Pool(processes=self.__config[CONFIG.MAX_PROCESSING_NUMBER])
 
@@ -109,6 +110,38 @@ class Bot:
                                 (self.__handler, self.__config[CONFIG.MAX_CONSUMER_NUMBER], is_leader),
                                 error_callback=lambda err: Logger.error(err))
 
+    def __launch_interval(self) -> None:
+        """
+        Launch interval tasks
+        """
+        if self.__loop is None:
+            return
+
+        async def __interval(func, period, times, *args, **kwargs):
+            unlimited = False
+
+            if times == 0:
+                unlimited = True
+
+            while True:
+                self.__queue.put({
+                    CONFIG.BOT_KEY_MESSAGE_TYPE: CONFIG.BOT_MESSAGE_TYPE_INTERVAL,
+                    CONFIG.COMMANDER_KEY_HANDLE: func,
+                })
+
+                if not unlimited:
+                    times = times - 1
+                    if times <= 0:
+                        break
+
+                await asyncio.sleep(period)
+
+        for commander in self.__commanders:
+            for interval in commander.get_intervals():
+                self.__loop.create_task(__interval(func=interval[CONFIG.COMMANDER_KEY_HANDLE],
+                                                   period=interval[CONFIG.COMMANDER_KEY_PERIOD],
+                                                   times=interval[CONFIG.COMMANDER_KEY_TIMES]))
+
     def run(self) -> None:
         """
         The entry for launch bot, in this function, bot will connect several components:
@@ -129,9 +162,13 @@ class Bot:
             self.__launch_subprocess(is_leader=True)
 
             loop = asyncio.get_event_loop()
+            self.__loop = loop
 
             loop.create_task(self.__wss.start())
             loop.create_task(self.__check_queue_size())
+
+            # launch interval tasks
+            self.__launch_interval()
 
             loop.run_forever()
         except Exception as e:
