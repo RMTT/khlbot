@@ -110,7 +110,6 @@ class KHLWss:
                             })
                 except (websockets.ConnectionClosedError, websockets.ConnectionClosed) as e:
                     Logger.warning("The websockets have closed unexpectedly")
-                    ws_connection = None
 
                     Logger.error(e)
 
