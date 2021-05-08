@@ -6,7 +6,7 @@ import sys
 
 class Logger:
     """
-    配置logger
+    Config logging module
     """
     __logger = None
 

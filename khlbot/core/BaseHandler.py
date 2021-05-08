@@ -1,4 +1,6 @@
-import asyncio
+import multiprocessing
+import os
+
 from khlbot.config import *
 from khlbot.core.Handler import Handler
 from khlbot.core.Commander import Commander
@@ -6,20 +8,21 @@ from khlbot.core.Commander import Commander
 
 class BaseHandler(Handler):
     """
-    处理各类消息的class
+    A simple but good enough implementation for Handler.
+    For detail, see khlbot.core.Handler
     """
 
-    def __init__(self, queue: asyncio.Queue):
+    def __init__(self, timeout, queue: multiprocessing.Queue):
         """
-        :param queue: 获取消息的队列
+        :param queue: Event Queue
         """
-        super().__init__(queue)
+        super().__init__(timeout, queue)
 
     async def handle_command(self, text: str, **kwargs) -> None:
         """
-        解析各种命令和其参数
-        :param text: 包含命令和参数的文本
-        :param kwargs: 包含一些在处理各种命令时可能用到的信息，一般都需要包含target_id
+        Parse commands and its parameters
+        :param text: The text contains commands and its parameters
+        :param kwargs: extra data
         :return: None
         """
         if len(self.get_commands()) == 0:
@@ -50,6 +53,10 @@ class BaseHandler(Handler):
                         await func(*params, **kwargs)
                         break
 
-    async def handle(self, item):
+    async def handle(self, item) -> None:
+        """
+        Same as Handler.handle
+        """
+        print("I'm handled on process: " + str(os.getpid()))
         if item["type"] == KHL_MSG_TEXT and item["channel_type"] == "GROUP":
             await self.handle_command(item["content"], target_id=item["target_id"], extra=item["extra"])

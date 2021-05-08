@@ -7,12 +7,12 @@ import zlib
 
 def create_msg_to_channel(content, channel_id, _type, token):
     """
-    发送消息到指定频道
-    :param content: 消息内容
-    :param channel_id: 频道ID
-    :param _type: 消息类型
-    :param token: 开黑啦机器人token
-    :return: True表示发送成功，False表示发送失败
+    Send message to specific channel
+    :param content: message content
+    :param channel_id: channel id
+    :param _type: message type
+    :param token: KHL bot token
+    :return: True if success, else False
     """
     url = KHL_API_BASEURL + KHL_API_CREATE_MSG
 
@@ -36,10 +36,10 @@ def create_msg_to_channel(content, channel_id, _type, token):
     return False
 
 
-def decompress_to_json(data):
+def decompress_to_json(data) -> json:
     """
-    解压zlib数据
-    :param data: zlib压缩过的数据
-    :return: None
+    Decompress zlib data
+    :param data: Data be compressed via zlib
+    :return: json
     """
     return json.loads(zlib.decompress(data))
