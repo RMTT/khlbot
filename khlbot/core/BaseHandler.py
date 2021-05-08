@@ -1,7 +1,6 @@
 import multiprocessing
 import khlbot.config as CONFIG
-
-from khlbot.config import *
+from khlbot.khl.Event import Event
 from khlbot.core.Handler import Handler
 
 
@@ -17,10 +16,11 @@ class BaseHandler(Handler):
         """
         super().__init__(timeout, queue)
 
-    async def handle_command(self, text: str, **kwargs) -> None:
+    async def handle_command(self, text: str, event, **kwargs) -> None:
         """
         Parse commands and its parameters
         :param text: The text contains commands and its parameters
+        :param event: KHL Event object
         :param kwargs: extra data
         :return: None
         """
@@ -48,7 +48,7 @@ class BaseHandler(Handler):
 
                     if len(params) == commands[command][CONFIG.COMMANDER_KEY_PARAM_NUMBER]:
                         func = commands[command][CONFIG.COMMANDER_KEY_HANDLE]
-
+                        kwargs[CONFIG.BOT_KEY_EVENT] = event
                         await func(*params, **kwargs)
                         break
 
@@ -58,6 +58,7 @@ class BaseHandler(Handler):
         """
         if item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_COMMAND:
             item = item[CONFIG.BOT_KEY_MESSAGE_DATA]
-            await self.handle_command(item["content"], target_id=item["target_id"], extra=item["extra"])
+            event = Event(item)
+            await self.handle_command(item["content"], event=event)
         elif item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_INTERVAL:
             await item[CONFIG.COMMANDER_KEY_HANDLE]()
