@@ -57,7 +57,7 @@ class Event:
     @property
     def extra(self):
         if self.__extra is None:
-            self.__extra = Extra(_type=self.type, body=self.__data[CONFIG.KHL_EVENT_KEY_EXTRA])
+            self.__extra = Extra(body=self.__data[CONFIG.KHL_EVENT_KEY_EXTRA])
 
         return self.__extra
 
