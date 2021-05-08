@@ -91,7 +91,7 @@ class KHLWss:
 
             while True:
                 try:
-                    if not ws_connection.open:
+                    if ws_connection is None or not ws_connection.open:
                         Logger.warning("Reconnecting to khl websocket")
                         uri = KHLWss.get_gateway(token=self.__token, url=KHL_API_BASEURL + KHL_API_GATEWAY)  # uri可能已经更新
                         ws_connection = await websockets.client.connect(uri)
