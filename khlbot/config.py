@@ -3,7 +3,9 @@ import logging
 KHL_API_BASEURL = "https://www.kaiheila.cn/api"
 
 KHL_API_GATEWAY = "/v3/gateway/index"
-KHL_API_CREATE_MSG = "/v3/message/create"
+
+KHL_API_CHANNEL_MESSAGE_CREATE = KHL_API_BASEURL + "/v3/message/create"
+KHL_API_CHANNEL_MESSAGE_UPDATE = KHL_API_BASEURL + "/v3/message/update"
 
 LOGGING_FILE_LEVEL = logging.INFO
 LOGGING_CONSOLE_LEVEL = logging.INFO
@@ -20,6 +22,7 @@ BOT_MESSAGE_TYPE_COMMAND = 1
 
 BOT_KEY_MESSAGE_TYPE = "type"
 BOT_KEY_MESSAGE_DATA = "data"
+BOT_KEY_EVENT = "event"
 
 # keys for commander
 COMMANDER_KEY_PARAM_NUMBER = "param_number"
@@ -32,3 +35,27 @@ COMMANDER_KEY_TIMES = "times"
 KHL_MSG_TEXT = 1
 KHL_MSG_CARD = 10
 KHL_MSG_MARKDOWN = 9
+KHL_MSG_SYSTEM = 255
+
+# khl channel type
+KHL_CHANNEL_TYPE_GROUP = 0
+KHL_CHANNEL_TYPE_PERSON = 1
+
+# khl event key
+KHL_EVENT_KEY_CHANNEL_TYPE = "channel_type"
+KHL_EVENT_KEY_TARGET_ID = "target_id"
+KHL_EVENT_KEY_AUTHOR_ID = "author_id"
+KHL_EVENT_KEY_CONTENT = "content"
+KHL_EVENT_KEY_MSG_ID = "msg_id"
+KHL_EVENT_KEY_MSG_TIMESTAMP = "msg_timestamp"
+KHL_EVENT_KEY_NONCE = "nonce"
+KHL_EVENT_KEY_EXTRA = "extra"
+KHL_EVENT_KEY_TYPE = "type"
+KHL_EVENT_KEY_BODY = "body"
+KHL_EVENT_KEY_GUILD_ID = "guild_id"
+KHL_EVENT_KEY_CHANNEL_NAME = "channel_name"
+KHL_EVENT_KEY_MENTION = "mention"
+KHL_EVENT_KEY_MENTION_ALL = "mention_all"
+KHL_EVENT_KEY_MENTION_ROLES = "mention_roles"
+KHL_EVENT_KEY_MENTION_HERE = "mention_here"
+KHL_EVENT_KEY_AUTHOR = "author"
