@@ -1,5 +1,7 @@
 import asyncio
 import multiprocessing
+import queue
+
 import khlbot.config as CONFIG
 import requests
 import json
@@ -102,12 +104,19 @@ class KHLWss:
 
                     if json_rep['s'] == 0:
                         self.latest_sn = json_rep["sn"]
-                        print(json_rep)
                         if self.__event_queue is not None:
-                            self.__event_queue.put({
-                                CONFIG.BOT_KEY_MESSAGE_TYPE: CONFIG.BOT_MESSAGE_TYPE_EVENT,
-                                CONFIG.BOT_KEY_MESSAGE_DATA: json_rep['d']
-                            })
+                            try:
+                                self.__event_queue.put_nowait({
+                                    CONFIG.BOT_KEY_MESSAGE_TYPE: CONFIG.BOT_MESSAGE_TYPE_EVENT,
+                                    CONFIG.BOT_KEY_MESSAGE_DATA: json_rep['d']
+                                })
+                            except ValueError as err:
+                                Logger.error(RuntimeError("Event queue has closed unexpectedly"))
+                                Logger.error(err)
+                            except queue.Full:
+                                Logger.warning("Event queue is full")
+
+
                 except (websockets.ConnectionClosedError, websockets.ConnectionClosed) as e:
                     Logger.warning("The websockets have closed unexpectedly")
 
