@@ -53,8 +53,8 @@ class BaseHandler(Handler):
                         try:
                             await func(*params, **kwargs)
                         except Exception as err:
-                            Logger.error(RuntimeError(
-                                f"command {command} and it's handle function {func.__name__} raise some error"))
+                            Logger.warning(
+                                f"command {command} and it's handle function {func.__name__} raise some error")
                             Logger.error(err)
                         break
 
