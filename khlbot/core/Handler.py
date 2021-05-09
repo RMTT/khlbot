@@ -1,7 +1,9 @@
 import abc
 import asyncio
 import multiprocessing
+import queue
 import time
+from khlbot.core.Logger import Logger
 
 
 class Handler(metaclass=abc.ABCMeta):
@@ -12,13 +14,13 @@ class Handler(metaclass=abc.ABCMeta):
      simple Handler implementation which BaseHandler can easily use
     """
 
-    def __init__(self, timeout, queue: multiprocessing.Queue = None):
+    def __init__(self, timeout, _queue: multiprocessing.Queue = None):
         """
         :param timeout: Max idle time, it the process take long time to idle,
         it will be exited automatically
-        :param queue: Event queue for consumer
+        :param _queue: Event queue for consumer
         """
-        self.__queue = queue
+        self.__queue = _queue
         self.__commands = []
         self.__active_time = time.time()
         self.__timeout = timeout
@@ -70,7 +72,7 @@ class Handler(metaclass=abc.ABCMeta):
             if time.time() - self.__active_time >= self.__timeout:
                 exit(0)
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.__timeout)
 
     async def consume(self, is_leader: bool = False) -> None:
         """
@@ -88,12 +90,15 @@ class Handler(metaclass=abc.ABCMeta):
             if self.__queue.empty():
                 await asyncio.sleep(1)
                 continue
+            try:
+                item = self.__queue.get_nowait()
+                self.__active_time = time.time()
 
-            item = self.__queue.get()
-            await self.handle(item=item)
-            self.__queue.task_done()
-
-            self.__active_time = time.time()
+                await self.handle(item=item)
+            except ValueError as err:
+                Logger.error(RuntimeError("Event has closed unexpectedly, consumer cannot get anything"))
+            except queue.Empty as err:
+                await asyncio.sleep(0.5)
 
     @abc.abstractmethod
     async def handle(self, item):

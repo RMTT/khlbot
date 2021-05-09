@@ -2,6 +2,7 @@ import multiprocessing
 import khlbot.config as CONFIG
 from khlbot.khl.Event import Event
 from khlbot.core.Handler import Handler
+from khlbot.core.Logger import Logger
 
 
 class BaseHandler(Handler):
@@ -49,7 +50,12 @@ class BaseHandler(Handler):
                     if len(params) == commands[command][CONFIG.COMMANDER_KEY_PARAM_NUMBER]:
                         func = commands[command][CONFIG.COMMANDER_KEY_HANDLE]
                         kwargs[CONFIG.BOT_KEY_EVENT] = event
-                        await func(*params, **kwargs)
+                        try:
+                            await func(*params, **kwargs)
+                        except Exception as err:
+                            Logger.error(RuntimeError(
+                                f"command {command} and it's handle function {func.__name__} raise some error"))
+                            Logger.error(err)
                         break
 
     async def handle_subscribe(self, _type, condition: dict, handle, event: Event) -> None:
@@ -80,28 +86,39 @@ class BaseHandler(Handler):
             kwargs = {
                 CONFIG.COMMANDER_KEY_EVENT: event
             }
-
-            await handle(**kwargs)
+            try:
+                await handle(**kwargs)
+            except Exception as err:
+                Logger.warning(f"subscribe event function {handle.__name__} raises an error")
+                Logger.error(err)
 
     async def handle(self, item) -> None:
         """
         Same as Handler.handle
         """
         if item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_EVENT:
-            item = item[CONFIG.BOT_KEY_MESSAGE_DATA]
-            event = Event(item)
+            try:
+                item = item[CONFIG.BOT_KEY_MESSAGE_DATA]
+                event = Event(item)
 
-            if event.type == CONFIG.KHL_MSG_TEXT:
-                await self.handle_command(item["content"], event=event)
-            elif event.type == CONFIG.KHL_MSG_SYSTEM:
-                system_event_type = event.extra.type
-                _subscribes = self.get_subscribes()
-                if system_event_type is not None and system_event_type in _subscribes:
-                    for item in _subscribes[system_event_type]:
-                        await self.handle_subscribe(_type=system_event_type,
-                                                    condition=item[CONFIG.COMMANDER_KEY_CONDITIONS],
-                                                    handle=item[CONFIG.COMMANDER_KEY_HANDLE],
-                                                    event=event)
+                if event.type == CONFIG.KHL_MSG_TEXT:
+                    await self.handle_command(item["content"], event=event)
+                elif event.type == CONFIG.KHL_MSG_SYSTEM:
+                    system_event_type = event.extra.type
+                    _subscribes = self.get_subscribes()
+                    if system_event_type is not None and system_event_type in _subscribes:
+                        for item in _subscribes[system_event_type]:
+                            await self.handle_subscribe(_type=system_event_type,
+                                                        condition=item[CONFIG.COMMANDER_KEY_CONDITIONS],
+                                                        handle=item[CONFIG.COMMANDER_KEY_HANDLE],
+                                                        event=event)
+            except ValueError as err:
+                Logger.error(RuntimeError("Please check commands configuration"))
+                Logger.error(err)
 
         elif item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_INTERVAL:
-            await item[CONFIG.COMMANDER_KEY_HANDLE]()
+            try:
+                await item[CONFIG.COMMANDER_KEY_HANDLE]()
+            except Exception as err:
+                Logger.warning(f"interval function {item[CONFIG.COMMANDER_KEY_HANDLE].__name__} raises an error")
+                Logger.error(err)

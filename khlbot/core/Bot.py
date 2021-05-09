@@ -33,7 +33,7 @@ class Bot:
 
         max_queue_size = 10000  # default queue size
         if CONFIG.MAX_EVENT_QUEUE_SIZE in self.__config:
-            max_queue_size = 10000
+            max_queue_size = self.__config[CONFIG.MAX_EVENT_QUEUE_SIZE]
         if queue is None:
             self.__queue = self.__process_manager.Queue(maxsize=max_queue_size)
         else:
@@ -85,6 +85,23 @@ class Bot:
         loop = asyncio.get_event_loop()
 
         tasks = [loop.create_task(handler.consume(is_leader=is_leader)) for _ in range(consumer_number)]
+
+        async def check_task_exception():
+            while True:
+                for task in tasks:
+                    try:
+                        exception = task.exception()
+
+                        if exception is not None:
+                            Logger.error(exception)
+                    except asyncio.CancelledError as err:
+                        Logger.error(RuntimeError("consumer has cancelled unexpectedly"))
+                        Logger.error(err)
+                    except asyncio.InvalidStateError:
+                        pass
+                await asyncio.sleep(2)
+
+        loop.create_task(check_task_exception())
 
         loop.run_forever()
 
