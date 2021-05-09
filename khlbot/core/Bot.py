@@ -158,6 +158,7 @@ class Bot:
 
             for commander in self.__commanders:
                 self.__handler.add_commands(commander.get_commands())
+                self.__handler.add_subscribes(commander.get_subscribes())
 
             self.__launch_subprocess(is_leader=True)
 

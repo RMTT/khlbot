@@ -6,3 +6,9 @@ class User:
         if item in self.__data:
             return self.__data[item]
         return None
+
+    def __getitem__(self, item):
+        if item in self.__data:
+            return self.__data[item]
+
+        return None

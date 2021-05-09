@@ -18,11 +18,12 @@ PROCESSING_IDLE_TIMEOUT = "PROCESSING_IDLE_TIMEOUT"
 
 # keys for bot
 BOT_MESSAGE_TYPE_INTERVAL = 0
-BOT_MESSAGE_TYPE_COMMAND = 1
+BOT_MESSAGE_TYPE_EVENT = 1
 
 BOT_KEY_MESSAGE_TYPE = "type"
 BOT_KEY_MESSAGE_DATA = "data"
 BOT_KEY_EVENT = "event"
+BOT_KEY_EVENT_FILTER = "event_filter"
 
 # keys for commander
 COMMANDER_KEY_PARAM_NUMBER = "param_number"
@@ -30,6 +31,9 @@ COMMANDER_KEY_HANDLE = "handle"
 COMMANDER_KEY_PARTIAL = "partial"
 COMMANDER_KEY_PERIOD = "period"
 COMMANDER_KEY_TIMES = "times"
+COMMANDER_KEY_CONDITIONS = "conditions"
+COMMANDER_KEY_EVENT_TYPE = "event_type"
+COMMANDER_KEY_EVENT = "event"
 
 # khl message type
 KHL_MSG_TEXT = 1
@@ -59,3 +63,10 @@ KHL_EVENT_KEY_MENTION_ALL = "mention_all"
 KHL_EVENT_KEY_MENTION_ROLES = "mention_roles"
 KHL_EVENT_KEY_MENTION_HERE = "mention_here"
 KHL_EVENT_KEY_AUTHOR = "author"
+
+# khl event type
+KHL_EVENT_TYPE_JOINED_GUILD = "joined_guild"
+KHL_EVENT_TYPE_EXITED_GUILD = "exited_guild"
+KHL_EVENT_TYPE_UPDATED_GUILD_MEMBER = "updated_guild_member"
+KHL_EVENT_TYPE_GUILD_MEMBER_ONLINE = "guild_member_online"
+KHL_EVENT_TYPE_GUILD_MEMBER_OFFLINE = "guild_member_offline"

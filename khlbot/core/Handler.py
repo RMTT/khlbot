@@ -22,6 +22,7 @@ class Handler(metaclass=abc.ABCMeta):
         self.__commands = []
         self.__active_time = time.time()
         self.__timeout = timeout
+        self.__subscribes = {}
 
     @property
     def event_queue(self):
@@ -40,11 +41,29 @@ class Handler(metaclass=abc.ABCMeta):
         """
         self.__commands.append(commands)
 
+    def add_subscribes(self, items: dict) -> None:
+        """
+        Add subscribes to handler
+        :param items: A list contains subscribes
+        :return: None
+        """
+        for item in items:
+            if item not in self.__subscribes:
+                self.__subscribes[item] = []
+
+            self.__subscribes[item] = self.__subscribes[item] + items[item]
+
     def get_commands(self) -> list:
         """
         Get command of this commander
         """
         return self.__commands
+
+    def get_subscribes(self) -> dict:
+        """
+        Get subscribes
+        """
+        return self.__subscribes
 
     async def check_timeout(self):
         while True:

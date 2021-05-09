@@ -52,13 +52,56 @@ class BaseHandler(Handler):
                         await func(*params, **kwargs)
                         break
 
+    async def handle_subscribe(self, _type, condition: dict, handle, event: Event) -> None:
+        """
+        Handle subscribe events
+        :param _type: KHL Event type
+        :param condition: Conditions to filter event
+        :param handle: Handle function
+        :param event: Event Object
+        :return: None
+        """
+        can_run = True
+
+        if condition is not None:
+            for item in condition:
+                keys = str(item).strip().split('.')
+                step = None
+                for key in keys:
+                    if step is None:
+                        step = condition[key]
+                    else:
+                        step = step[key]
+                if step != condition[item]:
+                    can_run = False
+                    break
+
+        if can_run:
+            kwargs = {
+                CONFIG.COMMANDER_KEY_EVENT: event
+            }
+
+            await handle(**kwargs)
+
     async def handle(self, item) -> None:
         """
         Same as Handler.handle
         """
-        if item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_COMMAND:
+        if item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_EVENT:
             item = item[CONFIG.BOT_KEY_MESSAGE_DATA]
             event = Event(item)
-            await self.handle_command(item["content"], event=event)
+
+            if event.type == CONFIG.KHL_MSG_TEXT:
+                await self.handle_command(item["content"], event=event)
+            elif event.type == CONFIG.KHL_MSG_SYSTEM:
+                system_event_type = event.extra.type
+                _subscribes = self.get_subscribes()
+                if system_event_type is not None and system_event_type in _subscribes:
+                    for item in _subscribes[system_event_type]:
+                        await self.handle_subscribe(_type=system_event_type,
+                                                    condition=item[CONFIG.COMMANDER_KEY_CONDITIONS],
+                                                    handle=item[CONFIG.COMMANDER_KEY_HANDLE],
+                                                    event=event)
+
         elif item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_INTERVAL:
             await item[CONFIG.COMMANDER_KEY_HANDLE]()

@@ -102,10 +102,10 @@ class KHLWss:
 
                     if json_rep['s'] == 0:
                         self.latest_sn = json_rep["sn"]
-
+                        print(json_rep)
                         if self.__event_queue is not None:
                             self.__event_queue.put({
-                                CONFIG.BOT_KEY_MESSAGE_TYPE: CONFIG.BOT_MESSAGE_TYPE_COMMAND,
+                                CONFIG.BOT_KEY_MESSAGE_TYPE: CONFIG.BOT_MESSAGE_TYPE_EVENT,
                                 CONFIG.BOT_KEY_MESSAGE_DATA: json_rep['d']
                             })
                 except (websockets.ConnectionClosedError, websockets.ConnectionClosed) as e:

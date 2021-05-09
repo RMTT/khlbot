@@ -22,6 +22,11 @@ class Event:
 
         return None
 
+    def __getattr__(self, item):
+        if item in self.__data:
+            return self.__data[item]
+        return None
+
     @property
     def channel_type(self):
         return self.__data[CONFIG.KHL_EVENT_KEY_CHANNEL_TYPE]

@@ -16,12 +16,16 @@ class Commander:
         self.__prefix = prefix
         self.__commands = {}
         self.__intervals = []
+        self.__subscribes = {}
 
     def get_commands(self) -> dict:
         return self.__commands
 
     def get_intervals(self):
         return self.__intervals
+
+    def get_subscribes(self):
+        return self.__subscribes
 
     def command(self, command, *params, **extras):
         """
@@ -76,6 +80,38 @@ class Commander:
                 item[CONFIG.COMMANDER_KEY_HANDLE] = wrapper
 
             self.__intervals.append(item)
+
+            return wrapper
+
+        return decorator
+
+    def subscribe(self, _type, conditions: dict = None, **extras):
+        """
+        Decorator for period task
+        :param _type: KHL system event tpye
+        :param conditions: condition to filter event
+        :param extras: Extras data:
+         partial: using partial function when invoke this command function
+        """
+
+        def decorator(func):
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                await func(*args, **kwargs)
+
+            item = {
+                CONFIG.COMMANDER_KEY_CONDITIONS: conditions
+            }
+
+            if CONFIG.COMMANDER_KEY_PARTIAL in extras:
+                item[CONFIG.COMMANDER_KEY_HANDLE] = functools.partial(wrapper, *extras["partial"])
+            else:
+                item[CONFIG.COMMANDER_KEY_HANDLE] = wrapper
+
+            if _type not in self.__subscribes:
+                self.__subscribes[_type] = []
+
+            self.__subscribes[_type].append(item)
 
             return wrapper
 
