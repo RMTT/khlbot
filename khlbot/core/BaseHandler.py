@@ -1,3 +1,4 @@
+import functools
 import multiprocessing
 import khlbot.config as CONFIG
 from khlbot.khl.Event import Event
@@ -53,8 +54,13 @@ class BaseHandler(Handler):
                         try:
                             await func(*params, **kwargs)
                         except Exception as err:
+                            if isinstance(func, functools.partial):
+                                func_name = func.func.__name__
+                            else:
+                                func_name = func.__name__
+
                             Logger.warning(
-                                f"command {command} and it's handle function {func.__name__} raise some error")
+                                f"command [{command}] and it's handle function [{func_name}] raise some error")
                             Logger.error(err)
                         break
 
@@ -89,7 +95,12 @@ class BaseHandler(Handler):
             try:
                 await handle(**kwargs)
             except Exception as err:
-                Logger.warning(f"subscribe event function {handle.__name__} raises an error")
+                if isinstance(handle, functools.partial):
+                    func_name = handle.func.__name__
+                else:
+                    func_name = handle.__name__
+
+                Logger.warning(f"subscribe event function [{func_name}] raises an error")
                 Logger.error(err)
 
     async def handle(self, item) -> None:
@@ -113,12 +124,18 @@ class BaseHandler(Handler):
                                                         handle=item[CONFIG.COMMANDER_KEY_HANDLE],
                                                         event=event)
             except ValueError as err:
-                Logger.error(RuntimeError("Please check commands configuration"))
+                Logger.warning("Please check commands configuration")
                 Logger.error(err)
 
         elif item[CONFIG.BOT_KEY_MESSAGE_TYPE] == CONFIG.BOT_MESSAGE_TYPE_INTERVAL:
             try:
                 await item[CONFIG.COMMANDER_KEY_HANDLE]()
             except Exception as err:
-                Logger.warning(f"interval function {item[CONFIG.COMMANDER_KEY_HANDLE].__name__} raises an error")
+                func = item[CONFIG.COMMANDER_KEY_HANDLE]
+                if isinstance(func, functools.partial):
+                    func_name = func.func.__name__
+                else:
+                    func_name = func.__name__
+
+                Logger.warning(f"interval function [{func_name}] raises an error")
                 Logger.error(err)

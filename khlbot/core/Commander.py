@@ -38,20 +38,16 @@ class Commander:
         """
 
         def decorator(func):
-            @functools.wraps(func)
-            async def wrapper(*args, **kwargs):
-                await func(*args, **kwargs)
-
             self.__commands[self.__prefix + command] = {
                 CONFIG.COMMANDER_KEY_PARAM_NUMBER: len(params),
-                CONFIG.COMMANDER_KEY_HANDLE: wrapper
+                CONFIG.COMMANDER_KEY_HANDLE: func
             }
 
             if CONFIG.COMMANDER_KEY_PARTIAL in extras:
-                self.__commands[self.__prefix + command][CONFIG.COMMANDER_KEY_HANDLE] = functools.partial(wrapper,
-                                                                                                          *extras[
-                                                                                                              "partial"])
-            return wrapper
+                self.__commands[self.__prefix + command][CONFIG.COMMANDER_KEY_HANDLE] = \
+                    functools.partial(func, *extras["partial"])
+                functools.update_wrapper(self.__commands[self.__prefix + command][CONFIG.COMMANDER_KEY_HANDLE], func)
+            return func
 
         return decorator
 
@@ -65,23 +61,20 @@ class Commander:
         """
 
         def decorator(func):
-            @functools.wraps(func)
-            async def wrapper(*args, **kwargs):
-                await func(*args, **kwargs)
-
             item = {
                 CONFIG.COMMANDER_KEY_PERIOD: period,
                 CONFIG.COMMANDER_KEY_TIMES: times
             }
 
             if CONFIG.COMMANDER_KEY_PARTIAL in extras:
-                item[CONFIG.COMMANDER_KEY_HANDLE] = functools.partial(wrapper, *extras["partial"])
+                item[CONFIG.COMMANDER_KEY_HANDLE] = functools.partial(func, *extras["partial"])
+                functools.update_wrapper(item[CONFIG.COMMANDER_KEY_HANDLE], func)
             else:
-                item[CONFIG.COMMANDER_KEY_HANDLE] = wrapper
+                item[CONFIG.COMMANDER_KEY_HANDLE] = func
 
             self.__intervals.append(item)
 
-            return wrapper
+            return func
 
         return decorator
 
@@ -95,24 +88,21 @@ class Commander:
         """
 
         def decorator(func):
-            @functools.wraps(func)
-            async def wrapper(*args, **kwargs):
-                await func(*args, **kwargs)
-
             item = {
                 CONFIG.COMMANDER_KEY_CONDITIONS: conditions
             }
 
             if CONFIG.COMMANDER_KEY_PARTIAL in extras:
-                item[CONFIG.COMMANDER_KEY_HANDLE] = functools.partial(wrapper, *extras["partial"])
+                item[CONFIG.COMMANDER_KEY_HANDLE] = functools.partial(func, *extras["partial"])
+                functools.update_wrapper(item[CONFIG.COMMANDER_KEY_HANDLE], func)
             else:
-                item[CONFIG.COMMANDER_KEY_HANDLE] = wrapper
+                item[CONFIG.COMMANDER_KEY_HANDLE] = func
 
             if _type not in self.__subscribes:
                 self.__subscribes[_type] = []
 
             self.__subscribes[_type].append(item)
 
-            return wrapper
+            return func
 
         return decorator

@@ -7,6 +7,7 @@ from khlbot.core.BaseHandler import BaseHandler
 import asyncio
 import multiprocessing
 import khlbot.config as CONFIG
+import atexit
 
 
 class Bot:
@@ -28,8 +29,11 @@ class Bot:
         self.__wss = KHLWss(token)
         self.__commanders = []
         self.__process_manager = multiprocessing.Manager()
+        self.__running_process_count = 0
         self.__config = _config
         self.__loop = None
+        self.__log_queue = multiprocessing.Queue()
+        self.__log_listener = None
 
         max_queue_size = 10000  # default queue size
         if CONFIG.MAX_EVENT_QUEUE_SIZE in self.__config:
@@ -53,7 +57,9 @@ class Bot:
         if CONFIG.MAX_CONSUMER_NUMBER not in self.__config:
             self.__config[CONFIG.MAX_CONSUMER_NUMBER] = 4  # default consumers per process
 
-        self.__pool = multiprocessing.Pool(processes=self.__config[CONFIG.MAX_PROCESSING_NUMBER])
+        self.__pool = multiprocessing.Pool(processes=self.__config[CONFIG.MAX_PROCESSING_NUMBER],
+                                           initializer=Bot.subprocess_initializer,
+                                           initargs=(self.__log_queue,))
 
     def add_commander(self, commander: Commander) -> None:
         """
@@ -72,6 +78,19 @@ class Bot:
         self.__handler = handler
 
     @staticmethod
+    def subprocess_initializer(log_queue, name="worker"):
+        """
+        Initializer of worker subprocess
+        :param log_queue: Log queue
+        :param name: process name
+        """
+        Logger.worker_configure(_queue=log_queue)
+
+        multiprocessing.current_process().name = name
+
+        Logger.info(f"active new worker: Process-{os.getpid()} {name}")
+
+    @staticmethod
     def subprocess_consumer(handler: Handler, consumer_number, is_leader: bool = False) -> None:
         """
         Launch consumers in subprocess, user should not invoke this function directly
@@ -84,26 +103,37 @@ class Bot:
         policy.set_event_loop(policy.new_event_loop())
         loop = asyncio.get_event_loop()
 
-        tasks = [loop.create_task(handler.consume(is_leader=is_leader)) for _ in range(consumer_number)]
+        tasks = [loop.create_task(handler.consume()) for _ in range(consumer_number)]
+        if not is_leader:
+            loop.create_task(handler.check_timeout())  # check idle
 
-        async def check_task_exception():
+        async def check_task() -> None:
             while True:
+                done_or_canceled_count = 0
                 for task in tasks:
                     try:
+                        if task.done() or task.cancelled():
+                            done_or_canceled_count = done_or_canceled_count + 1
+                            continue
+
                         exception = task.exception()
 
                         if exception is not None:
                             Logger.error(exception)
                     except asyncio.CancelledError as err:
-                        Logger.error(RuntimeError("consumer has cancelled unexpectedly"))
+                        Logger.error(RuntimeError(
+                            f"a consumer on [Process-{os.getpid()} {multiprocessing.current_process().name}] "
+                            f"has cancelled unexpectedly"))
                         Logger.error(err)
                     except asyncio.InvalidStateError:
                         pass
+                if done_or_canceled_count == consumer_number:
+                    Logger.warning(f"consumers on [Process-{os.getpid()} {multiprocessing.current_process().name}] "
+                                   f"have all done or canceled, worker stopped")
+                    return
                 await asyncio.sleep(2)
 
-        loop.create_task(check_task_exception())
-
-        loop.run_forever()
+        loop.run_until_complete(check_task())
 
     async def __check_queue_size(self) -> None:
         """
@@ -112,7 +142,11 @@ class Bot:
         """
         while True:
             if self.__queue is not None:
-                if self.__queue.qsize() > self.__config[CONFIG.MAX_CONSUMER_NUMBER]:
+                if self.__queue.qsize() > self.__config[CONFIG.MAX_CONSUMER_NUMBER] \
+                        and self.__running_process_count < self.__config[CONFIG.MAX_PROCESSING_NUMBER]:
+                    print("deliver task")
+                    self.__running_process_count = self.__running_process_count + 1
+
                     self.__launch_subprocess()
             await asyncio.sleep(1)
 
@@ -123,9 +157,20 @@ class Bot:
          it means the first subprocess for consumers, will not be exited when the process is idle
         :return: None
         """
+
+        def process_count(result=None):
+            self.__running_process_count = self.__running_process_count - 1
+
+        def process_error(err):
+            Logger.warning("Have a error when launch worker")
+            Logger.error(err)
+
+            process_count()
+
         self.__pool.apply_async(Bot.subprocess_consumer,
                                 (self.__handler, self.__config[CONFIG.MAX_CONSUMER_NUMBER], is_leader),
-                                error_callback=lambda err: Logger.error(err))
+                                error_callback=lambda err: Logger.error(err),
+                                callback=process_count)
 
     def __launch_interval(self) -> None:
         """
@@ -159,6 +204,17 @@ class Bot:
                                                    period=interval[CONFIG.COMMANDER_KEY_PERIOD],
                                                    times=interval[CONFIG.COMMANDER_KEY_TIMES]))
 
+    def __exit_handler(self):
+        """
+        Handle function when program will be exited for main process
+        """
+        self.__pool.close()
+        self.__pool.join()
+
+        if self.__log_listener is not None:
+            self.__log_listener.stop()
+        self.__log_queue.close()
+
     def run(self) -> None:
         """
         The entry for launch bot, in this function, bot will connect several components:
@@ -169,7 +225,14 @@ class Bot:
             return
 
         try:
-            Logger.init()
+            multiprocessing.current_process().name = "Bot"  # set main process name
+
+            atexit.register(self.__exit_handler)  # handle exit event
+
+            # set up logger
+            self.__log_listener = Logger.listener_configure(_queue=self.__log_queue)
+            self.__log_listener.start()
+
             self.__wss.event_queue = self.__queue
             self.__handler.event_queue = self.__queue
 
@@ -177,13 +240,14 @@ class Bot:
                 self.__handler.add_commands(commander.get_commands())
                 self.__handler.add_subscribes(commander.get_subscribes())
 
-            self.__launch_subprocess(is_leader=True)
-
             loop = asyncio.get_event_loop()
             self.__loop = loop
 
             loop.create_task(self.__wss.start())
             loop.create_task(self.__check_queue_size())
+
+            self.__launch_subprocess(is_leader=True)
+            self.__running_process_count = self.__running_process_count + 1
 
             # launch interval tasks
             self.__launch_interval()
@@ -191,3 +255,4 @@ class Bot:
             loop.run_forever()
         except Exception as e:
             Logger.error(e)
+            Logger.error(RuntimeError("fatal error, bot will be terminated"))
