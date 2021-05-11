@@ -38,7 +38,7 @@ class APIMetaclass(type):
 
     def __getattribute__(cls, item):
         apis = object.__getattribute__(cls, APIMetaclass.KEY_API)
-        print(item)
+
         if item in apis:
             desc = apis[item]
             url = desc[APIMetaclass.KEY_URL]
