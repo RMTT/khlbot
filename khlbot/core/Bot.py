@@ -1,4 +1,7 @@
 import os
+import signal
+import traceback
+
 from khlbot.core.KHLWss import KHLWss
 from khlbot.core.Handler import Handler
 from khlbot.core.Logger import Logger
@@ -204,11 +207,17 @@ class Bot:
                                                    period=interval[CONFIG.COMMANDER_KEY_PERIOD],
                                                    times=interval[CONFIG.COMMANDER_KEY_TIMES]))
 
+    @staticmethod
+    def signal_handler(sig=None, frame=None):
+        Logger.warning("khlbot will be exited")
+        exit(0)
+
     def __exit_handler(self):
         """
         Handle function when program will be exited for main process
         """
         self.__pool.close()
+        self.__pool.terminate()
         self.__pool.join()
 
         if self.__log_listener is not None:
@@ -228,6 +237,10 @@ class Bot:
             multiprocessing.current_process().name = "Bot"  # set main process name
 
             atexit.register(self.__exit_handler)  # handle exit event
+
+            # handle some signal
+            signal.signal(signal.SIGINT, Bot.signal_handler)
+            signal.signal(signal.SIGTERM, Bot.signal_handler)
 
             # set up logger
             self.__log_listener = Logger.listener_configure(_queue=self.__log_queue)
