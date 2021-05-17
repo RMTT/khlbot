@@ -1,20 +1,47 @@
 from khlbot.core.Bot import Bot
 from khlbot.core.Commander import Commander
-from khlbot.common import create_msg_to_channel
-from khlbot.config import KHL_MSG_TEXT
+import khlbot.config as CONFIG
+from khlbot.khl.ChannelMessageAPI import ChannelMessageAPI as ChannelMessage
 
 commander = Commander(prefix="-")
 
 
-@commander.command("hello")
-async def hello(**kwargs):
-    create_msg_to_channel("Hello", channel_id=kwargs["target_id"], _type=KHL_MSG_TEXT, token="")
+# 处理"-hello" 和 "-hello2"
+@commander.command("hello", partial=(2,))
+@commander.command("hello2", partial=(1,))
+async def hello(i, **kwargs):
+    event = kwargs["event"]
+    payload = {
+        "content": "**Hello**",
+        "target_id": event.target_id,
+        "quote": event.msg_id,
+        "type": CONFIG.KHL_MSG_MARKDOWN
+    }
+    json_rep = await ChannelMessage.create(body=payload, token="")
 
 
+# 周期任务，间隔3秒，运行3次
 @commander.interval(period=3, times=3)
-async def interval_test(**kwargs):
-    create_msg_to_channel("interval", channel_id="", _type=KHL_MSG_TEXT,
-                          token="")
+async def interval_test():
+    payload = {
+        "content": "**Hello**",
+        "target_id": "",
+        "quote": "",
+        "type": CONFIG.KHL_MSG_MARKDOWN
+    }
+    json_rep = await ChannelMessage.create(body=payload, token="")
+
+
+# 订阅系统消息，服务器有用户更新信息时将被调用
+@commander.subscribe(_type=CONFIG.KHL_EVENT_TYPE_UPDATED_GUILD_MEMBER)
+async def online(**kwargs):
+    event = kwargs["event"]
+    payload = {
+        "content": "**Hello**",
+        "target_id": "",
+        "type": CONFIG.KHL_MSG_MARKDOWN
+    }
+    json_rep = await ChannelMessage.create(body=payload, token="")
 
 
 config = {
